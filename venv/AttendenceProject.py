@@ -4,6 +4,7 @@ import face_recognition
 import os
 import threading
 
+# Load images and encode faces
 path = 'imagesAttendance'
 images = []
 Names = []
@@ -30,6 +31,7 @@ def findEncodings(images):
 encodeListKnown = findEncodings(images)
 print('Encoding Completed')
 
+# Initialize webcam
 cap = cv2.VideoCapture(0)
 frame_skip = 3  # Process every 3rd frame to reduce lag
 frame_count = 0
@@ -52,7 +54,7 @@ while True:
 
     frame_count += 1
 
-    # Only process every `frame_skip` frame
+    # Process every `frame_skip` frame in a separate thread
     if frame_count % frame_skip == 0:
         threading.Thread(target=process_frame, args=(img.copy(),)).start()
 
@@ -63,14 +65,19 @@ while True:
             faceDis = face_recognition.face_distance(encodeListKnown, encodeFace)
             matchIndex = np.argmin(faceDis)
 
-            if matches[matchIndex]:
+            if any(matches):  # If there is at least one match
                 name = Names[matchIndex].upper()
-                print(name)
-                y1, x2, y2, x1 = faceLoc
-                y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4  # Scale back
+            else:
+                name = "UNKNOWN"
 
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(img, name, (x1 + 6, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            print(name)
+            y1, x2, y2, x1 = faceLoc
+            y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4  # Scale back
+
+            # Draw rectangle and label
+            color = (0, 255, 0) if name != "UNKNOWN" else (0, 0, 255)  # Green for known, red for unknown
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(img, name, (x1 + 6, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     cv2.imshow('Webcam', img)
     if cv2.waitKey(1) & 0xFF == ord('q'):
